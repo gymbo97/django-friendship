@@ -21,17 +21,17 @@ from friendship.signals import (
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 CACHE_TYPES = {
-    'friends': 'f-%s',
-    'followers': 'fo-%s',
-    'following': 'fl-%s',
-    'requests': 'fr-%s',
-    'sent_requests': 'sfr-%s',
-    'unread_requests': 'fru-%s',
-    'unread_request_count': 'fruc-%s',
-    'read_requests': 'frr-%s',
-    'rejected_requests': 'frj-%s',
-    'unrejected_requests': 'frur-%s',
-    'unrejected_request_count': 'frurc-%s',
+    'friends': 'f-%d',
+    'followers': 'fo-%d',
+    'following': 'fl-%d',
+    'requests': 'fr-%d',
+    'sent_requests': 'sfr-%d',
+    'unread_requests': 'fru-%d',
+    'unread_request_count': 'fruc-%d',
+    'read_requests': 'frr-%d',
+    'rejected_requests': 'frj-%d',
+    'unrejected_requests': 'frur-%d',
+    'unrejected_request_count': 'frurc-%d',
 }
 
 BUST_CACHES = {
@@ -84,8 +84,8 @@ class FriendshipRequest(models.Model):
         verbose_name_plural = _('Friendship Requests')
         unique_together = ('from_user', 'to_user')
 
-    def __str__(self):
-        return "User #%s friendship requested #%s" % (self.from_user_id, self.to_user_id)
+#    def __str__(self):
+#        return "User #%d friendship requested #%d" % (self.from_user_id, self.to_user_id)
 
     def accept(self):
         """ Accept this friendship request """
@@ -158,7 +158,10 @@ class FriendshipManager(models.Manager):
 
         if friends is None:
             qs = Friend.objects.select_related('from_user', 'to_user').filter(to_user=user).all()
-            friends = [u.from_user for u in qs]
+            friends = []
+            for u in qs:
+                friend = u.from_user.id
+                friends.append(friend)
             cache.set(key, friends)
 
         return friends
@@ -171,7 +174,11 @@ class FriendshipManager(models.Manager):
         if requests is None:
             qs = FriendshipRequest.objects.select_related('from_user', 'to_user').filter(
                 to_user=user).all()
-            requests = list(qs)
+            requests = []
+            for u in qs:
+                part_requests = {"from_user": u.from_user.id, "to_user": u.to_user.id, "created": u.created, "id": u.id}
+                requests.append(part_requests)
+#            requests = list(qs)
             cache.set(key, requests)
 
         return requests
@@ -184,7 +191,11 @@ class FriendshipManager(models.Manager):
         if requests is None:
             qs = FriendshipRequest.objects.select_related('from_user', 'to_user').filter(
                 from_user=user).all()
-            requests = list(qs)
+            requests = []
+            for u in qs:
+                part_requests = {"from_user": u.from_user.id, "to_user": u.to_user.id, "created": u.created, "id": u.id}
+                requests.append(part_requests)
+#            requests = list(qs)
             cache.set(key, requests)
 
         return requests
@@ -300,7 +311,7 @@ class FriendshipManager(models.Manager):
 
         return request
 
-    def remove_friend(self, from_user, to_user):
+    def remove_friend(self, to_user, from_user):
         """ Destroy a friendship relationship """
         try:
             qs = Friend.objects.filter(
@@ -354,7 +365,7 @@ class Friend(models.Model):
         unique_together = ('from_user', 'to_user')
 
     def __str__(self):
-        return "User #%s is friends with #%s" % (self.to_user_id, self.from_user_id)
+        return "User #%d is friends with #%d" % (self.to_user_id, self.from_user_id)
 
     def save(self, *args, **kwargs):
         # Ensure users can't be friends with themselves
@@ -455,7 +466,7 @@ class Follow(models.Model):
         unique_together = ('follower', 'followee')
 
     def __str__(self):
-        return "User #%s follows #%s" % (self.follower_id, self.followee_id)
+        return "User #%d follows #%d" % (self.follower_id, self.followee_id)
 
     def save(self, *args, **kwargs):
         # Ensure users can't be friends with themselves
